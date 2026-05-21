@@ -143,14 +143,7 @@ if df is not None:
         with top_row_right:
             with st.container(border=True):
                 st.markdown(f"**數據佔比 (Pie Chart)**")
-                # 圓餅圖實作
-                fig_pie = px.pie(
-                    display_df, 
-                    names=x_axis, 
-                    values=y_axis, 
-                    hole=0.3, # 環形圖設計
-                    height=300
-                )
+                fig_pie = px.pie(display_df, names=x_axis, values=y_axis, hole=0.3, height=300)
                 fig_pie.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
                 fig_pie.update_traces(textposition='inside', textinfo='percent+label')
                 st.plotly_chart(fig_pie, use_container_width=True)
@@ -162,9 +155,19 @@ if df is not None:
                 st.markdown("**LLM 生成數據解讀報告**")
                 if run_analysis:
                     with st.spinner("AI 正在深度分析數據..."):
-                        data_context = f"數據摘要:\n{df.describe(include='all').to_string()}\n前5筆資料:\n{df.head().to_string()}"
-                        prompt = f"你是一位數據科學家。請分析這份資料：\n{data_context}\n\n使用者問題：{query_text}"
+                        # 核心優化：將運算結果摘要成文字表格餵給 AI
                         try:
+                            summary_df = display_df.groupby(x_axis)[y_axis].sum().sort_values(ascending=False).reset_index()
+                            data_context = f"數據統計表 (已依{y_axis}總和降序排序):\n{summary_df.to_string(index=False)}"
+                            
+                            prompt = f"""
+                            你是一位數據科學家。請依據以下統計表回答使用者問題，務必保持客觀且引用表格數據。
+                            
+                            統計資料：
+                            {data_context}
+                            
+                            使用者問題：{query_text}
+                            """
                             response = model.generate_content(prompt)
                             st.write(response.text)
                         except Exception as e:
@@ -172,12 +175,9 @@ if df is not None:
                 else:
                     st.info("請輸入問題並點擊執行分析。")
 
-        with bottom_row_right:
-            with st.container(border=True):
-                st.markdown("**描述性統計摘要**")
-                st.dataframe(display_df[y_axis].describe(), use_container_width=True)
+       
 
     with st.expander("🔍 檢視原始數據表"):
         st.dataframe(display_df, use_container_width=True)
 else:
-    st.info("👋 你好 haoda！請從左側上傳數據檔案 (CSV, Excel, JSON 或 XML) 來啟動儀表板。")
+    st.info("👋 你好 ！請從左側上傳數據檔案 (CSV, Excel, JSON 或 XML) 來啟動儀表板。")
