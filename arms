@@ -1,0 +1,261 @@
+ADDTOOL XEG32_ROT180_FINGERS_DOWN
+ADDOBJ cup P:0,400,0 C:200,200,200
+
+
+; 工作站配置
+;
+;                   FRONT
+;              第二面：加小料
+;                     Y+
+;                      ↑
+;                      |
+;      LEFT  ←────── ROBOT ──────→ RIGHT
+;     第三面                        第一面
+;   蓋杯/搖晃/出杯                 取杯/裝飲料
+
+
+; HOME 安全位置
+E6POS HOME = {X 0,Y 300,Z 350,A -180,B 0,C 101.725}
+
+
+; RIGHT 第一面
+; 取杯、裝飲料
+
+; 右側取杯上方
+E6POS R_CUP_UP = {X -350,Y 0,Z 300,A -180,B 0,C 101.725}
+
+; 右側取杯
+E6POS R_CUP = {X -350,Y 0,Z 180,A -180,B 0,C 101.725}
+
+; 右側飲料機上方
+E6POS R_DRINK_UP = {X -400,Y 80,Z 300,A -180,B 0,C 101.725}
+
+; 飲料機出飲料位置
+E6POS R_DRINK = {X -400,Y 80,Z 210,A -180,B 0,C 101.725}
+
+
+; FRONT 第二面
+; 放杯、拿湯匙、舀珍珠、倒珍珠
+
+; 杯子暫放區上方
+E6POS F_CUP_UP = {X 0,Y 430,Z 300,A -180,B 0,C 101.725}
+
+; 杯子暫放桌面
+E6POS F_CUP = {X 0,Y 430,Z 180,A -180,B 0,C 101.725}
+
+; 湯匙上方
+E6POS F_SPOON_UP = {X 120,Y 430,Z 300,A -180,B 0,C 101.725}
+
+; 湯匙抓取位置
+E6POS F_SPOON = {X 120,Y 430,Z 180,A -180,B 0,C 101.725}
+
+; 珍珠桶上方
+E6POS F_PEARL_UP = {X -120,Y 430,Z 300,A -180,B 0,C 101.725}
+
+; 湯匙伸入珍珠桶
+E6POS F_PEARL = {X -120,Y 430,Z 180,A -180,B 0,C 101.725}
+
+; 回到杯子上方
+E6POS F_POUR_UP = {X 0,Y 430,Z 280,A -180,B 0,C 101.725}
+
+; 湯匙靠近杯口
+E6POS F_POUR = {X 0,Y 430,Z 230,A -180,B 0,C 101.725}
+
+; 湯匙傾斜
+E6POS F_POUR_TILT = {X 0,Y 430,Z 230,A -180,B 30,C 101.725}
+
+
+; LEFT 第三面
+; 蓋杯、搖晃、交給客人
+
+; 左側蓋杯上方
+E6POS L_LID_UP = {X 350,Y -80,Z 300,A -180,B 0,C 101.725}
+
+; 左側壓杯蓋
+E6POS L_LID = {X 350,Y -80,Z 190,A -180,B 0,C 101.725}
+
+; 左側搖晃中央
+E6POS L_SHAKE_MID = {X 350,Y 0,Z 280,A -180,B 0,C 101.725}
+
+; 左側搖晃上方
+E6POS L_SHAKE_UP = {X 350,Y 0,Z 350,A -180,B 0,C 101.725}
+
+; 左側搖晃下方
+E6POS L_SHAKE_DOWN = {X 350,Y 0,Z 210,A -180,B 0,C 101.725}
+
+; 左側送餐安全位置
+E6POS L_SERVE_UP = {X 350,Y 80,Z 300,A -180,B 0,C 101.725}
+
+; 飲料交給客人
+E6POS L_SERVE = {X 350,Y 80,Z 200,A -180,B 0,C 101.725}
+
+
+; 正式飲料製作流程
+
+
+; STEP 1｜HOME
+; 回到中央安全位置
+
+PTP HOME CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+
+; STEP 2｜第一面 RIGHT
+; 取空杯
+
+PTP R_CUP_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN R_CUP CONT=1% Vel=40mm/s Acc=20% TOOL[0] BASE[0]
+
+; 模擬：XEG32 夾住空杯
+
+LIN R_CUP_UP CONT=1% Vel=40mm/s Acc=20% TOOL[0] BASE[0]
+
+
+; STEP 3｜第一面 RIGHT
+; 將空杯移到飲料機裝飲料
+
+PTP R_DRINK_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN R_DRINK CONT=1% Vel=35mm/s Acc=20% TOOL[0] BASE[0]
+
+; 模擬：飲料機開始出飲料
+
+LIN R_DRINK_UP CONT=1% Vel=35mm/s Acc=20% TOOL[0] BASE[0]
+
+
+; STEP 4｜第二面 FRONT
+; 將飲料杯移到工作台並放下
+
+PTP F_CUP_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN F_CUP CONT=1% Vel=40mm/s Acc=20% TOOL[0] BASE[0]
+
+; 模擬：放開飲料杯
+
+LIN F_CUP_UP CONT=1% Vel=40mm/s Acc=20% TOOL[0] BASE[0]
+
+
+; STEP 5｜第二面 FRONT
+; 移到湯匙位置並抓取湯匙
+
+PTP F_SPOON_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN F_SPOON CONT=1% Vel=35mm/s Acc=20% TOOL[0] BASE[0]
+
+; 模擬：夾住湯匙
+
+LIN F_SPOON_UP CONT=1% Vel=35mm/s Acc=20% TOOL[0] BASE[0]
+
+
+; STEP 6｜第二面 FRONT
+; 將湯匙移到珍珠桶並向下舀珍珠
+
+PTP F_PEARL_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN F_PEARL CONT=1% Vel=30mm/s Acc=15% TOOL[0] BASE[0]
+
+; 模擬：湯匙進入珍珠桶
+
+LIN F_PEARL_UP CONT=1% Vel=30mm/s Acc=15% TOOL[0] BASE[0]
+
+
+; STEP 7｜第二面 FRONT
+; 將裝有珍珠的湯匙移到飲料杯上方
+
+PTP F_POUR_UP CONT=5% Vel=15% Acc=15% TOOL[0] BASE[0]
+
+LIN F_POUR CONT=1% Vel=25mm/s Acc=15% TOOL[0] BASE[0]
+
+
+; STEP 8｜第二面 FRONT
+; 傾斜湯匙，將珍珠倒入飲料杯
+
+LIN F_POUR_TILT CONT=1% Vel=20mm/s Acc=10% TOOL[0] BASE[0]
+
+; B角度改變，模擬倒珍珠
+
+LIN F_POUR CONT=1% Vel=20mm/s Acc=10% TOOL[0] BASE[0]
+
+LIN F_POUR_UP CONT=1% Vel=30mm/s Acc=15% TOOL[0] BASE[0]
+
+
+; STEP 9｜第二面 FRONT
+; 將湯匙移回原位置並放下
+
+PTP F_SPOON_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN F_SPOON CONT=1% Vel=30mm/s Acc=15% TOOL[0] BASE[0]
+
+; 模擬：放開湯匙
+
+LIN F_SPOON_UP CONT=1% Vel=30mm/s Acc=15% TOOL[0] BASE[0]
+
+
+; STEP 10｜第二面 FRONT
+; 回到飲料杯位置並重新抓取飲料杯
+
+PTP F_CUP_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN F_CUP CONT=1% Vel=35mm/s Acc=20% TOOL[0] BASE[0]
+
+; 模擬：重新夾住飲料杯
+
+LIN F_CUP_UP CONT=1% Vel=35mm/s Acc=20% TOOL[0] BASE[0]
+
+
+; STEP 11｜第三面 LEFT
+; 將飲料移到左側進行蓋杯
+
+PTP L_LID_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN L_LID CONT=1% Vel=30mm/s Acc=15% TOOL[0] BASE[0]
+
+; 模擬：壓上杯蓋
+
+LIN L_LID_UP CONT=1% Vel=30mm/s Acc=15% TOOL[0] BASE[0]
+
+
+; STEP 12｜第三面 LEFT
+; 將完成蓋杯的飲料移到搖晃位置
+
+PTP L_SHAKE_MID CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+
+; STEP 13｜第三面 LEFT
+; 上下快速搖晃飲料5次
+
+LIN L_SHAKE_UP CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+LIN L_SHAKE_DOWN CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+
+LIN L_SHAKE_UP CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+LIN L_SHAKE_DOWN CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+
+LIN L_SHAKE_UP CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+LIN L_SHAKE_DOWN CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+
+LIN L_SHAKE_UP CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+LIN L_SHAKE_DOWN CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+
+LIN L_SHAKE_UP CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+LIN L_SHAKE_DOWN CONT=60% Vel=180mm/s Acc=40% TOOL[0] BASE[0]
+
+LIN L_SHAKE_MID CONT=1% Vel=80mm/s Acc=20% TOOL[0] BASE[0]
+
+
+; STEP 14｜第三面 LEFT
+; 將完成飲料送給客人
+
+PTP L_SERVE_UP CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
+
+LIN L_SERVE CONT=1% Vel=35mm/s Acc=15% TOOL[0] BASE[0]
+
+; 模擬：XEG32 放開
+; 完成品交給客人
+
+
+; STEP 15｜LEFT → HOME
+; 收回手臂並回到中央安全位置
+
+LIN L_SERVE_UP CONT=1% Vel=35mm/s Acc=15% TOOL[0] BASE[0]
+
+PTP HOME CONT=10% Vel=20% Acc=20% TOOL[0] BASE[0]
