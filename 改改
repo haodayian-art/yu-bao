@@ -1,0 +1,328 @@
+//輸入 home跟q
+
+
+using System;
+using System.Threading;
+using SDKHrobot;
+
+namespace HiwinRobotApp
+{
+    class Program
+    {
+        private static HRobot.CallBackFun myCallback;
+
+        static void CallBackHandler(ushort cmd, ushort rlt, ref ushort msg, int len)
+        {
+            // 控制器事件回饋處理
+        }
+
+        static void Main(string[] args)
+        {
+            string robotIp = "192.168.0.2"; // 控制器 IP
+            int connectionLevel = 1;         // 1: 操作者等級 (HRSS 需為 EXT 模式)
+
+            myCallback = new HRobot.CallBackFun(CallBackHandler);
+
+            // =========================================================
+            // 1. 連線
+            // =========================================================
+
+            Console.WriteLine($"[1/4] 連線至機器人 ({robotIp})...");
+
+            int robotId = HRobot.open_connection(
+                robotIp,
+                connectionLevel,
+                myCallback
+            );
+
+            if (robotId < 0)
+            {
+                Console.WriteLine($"連線失敗，錯誤代碼: {robotId}");
+                return;
+            }
+
+            Console.WriteLine($"連線成功，裝置 ID: {robotId}");
+
+
+            // =========================================================
+            // 2. 清除警報並激磁
+            // =========================================================
+
+            Console.WriteLine("[2/4] 馬達激磁啟動...");
+
+            HRobot.clear_alarm(robotId);
+
+            Thread.Sleep(200);
+
+            HRobot.set_motor_state(robotId, 1);
+
+            int timeout = 0;
+
+            while (HRobot.get_motor_state(robotId) == 0)
+            {
+                Thread.Sleep(100);
+
+                if (++timeout > 30)
+                {
+                    Console.WriteLine("錯誤：馬達激磁逾時！");
+
+                    HRobot.disconnect(robotId);
+
+                    return;
+                }
+            }
+
+            Console.WriteLine("馬達已成功激磁！");
+
+
+            // =========================================================
+            // 3. 設定速度
+            // =========================================================
+
+            HRobot.set_override_ratio(robotId, 10);
+
+            Console.WriteLine("[3/4] 已設定速度倍率為 10%");
+
+
+            // =========================================================
+            // 4. 記錄程式啟動時的位置
+            // =========================================================
+
+            double[] startJoints = new double[6];
+
+            HRobot.get_current_joint(robotId, startJoints);
+
+            Console.WriteLine("[4/4] 已記錄目前位置為 Start");
+
+
+            // =========================================================
+            // 定義三個點位
+            // =========================================================
+
+            // Point 1：中央準備位置
+            double[] Point1 = new double[6]
+            {
+                0, 0, -10, 0, -80, 0
+            };
+
+            // Point 2：右前方
+            double[] Point2 = new double[6]
+            {
+                35, 20, -35, 45, -75, 45
+            };
+
+            // Point 3：左前方
+            double[] Point3 = new double[6]
+            {
+                -35, 20, -35, -45, -75, -45
+            };
+
+
+            // =========================================================
+            // 開始接受使用者指令
+            // =========================================================
+
+            Console.WriteLine();
+            Console.WriteLine("======================================");
+            Console.WriteLine("      HIWIN RA605GB 點位控制系統");
+            Console.WriteLine("======================================");
+            Console.WriteLine();
+            Console.WriteLine("可輸入：");
+            Console.WriteLine("  1       → 移動至 Point1");
+            Console.WriteLine("  2       → 移動至 Point2");
+            Console.WriteLine("  3       → 移動至 Point3");
+            Console.WriteLine("  1 2 3   → 依序 Point1 → Point2 → Point3");
+            Console.WriteLine("  3 2 1   → 依序 Point3 → Point2 → Point1");
+            Console.WriteLine("  home    → 回到程式啟動時的位置");
+            Console.WriteLine("  q       → 結束程式");
+            Console.WriteLine();
+
+
+            // =========================================================
+            // 持續等待輸入
+            // =========================================================
+
+            while (true)
+            {
+                Console.WriteLine();
+                Console.Write("請輸入指令 > ");
+
+                string input = Console.ReadLine();
+
+                // 防止空白輸入
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    continue;
+                }
+
+
+                // -----------------------------------------------------
+                // 離開程式
+                // -----------------------------------------------------
+
+                if (input.Trim().ToLower() == "q")
+                {
+                    Console.WriteLine("準備結束程式...");
+                    break;
+                }
+
+
+                // -----------------------------------------------------
+                // 回到程式啟動位置
+                // -----------------------------------------------------
+
+                if (input.Trim().ToLower() == "home")
+                {
+                    Console.WriteLine("--> 移動至 Start 位置...");
+
+                    HRobot.ptp_axis(robotId, 0, startJoints);
+
+                    WaitMotionDone(robotId);
+
+                    Console.WriteLine("Start 位置到達！");
+
+                    continue;
+                }
+
+
+                // -----------------------------------------------------
+                // 將輸入拆開
+                //
+                // 例如：
+                //
+                // 輸入：
+                // 1 2 3
+                //
+                // 會變成：
+                // commands[0] = "1"
+                // commands[1] = "2"
+                // commands[2] = "3"
+                // -----------------------------------------------------
+
+                string[] commands = input.Split(
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries
+                );
+
+
+                // =====================================================
+                // 一個一個執行點位
+                // =====================================================
+
+                foreach (string command in commands)
+                {
+                    double[] target = null;
+
+                    // -------------------------------------------------
+                    // 判斷要去哪個點位
+                    // -------------------------------------------------
+
+                    switch (command)
+                    {
+                        case "1":
+
+                            target = Point1;
+
+                            Console.WriteLine();
+                            Console.WriteLine("--> 準備移動至 Point1");
+
+                            break;
+
+
+                        case "2":
+
+                            target = Point2;
+
+                            Console.WriteLine();
+                            Console.WriteLine("--> 準備移動至 Point2");
+
+                            break;
+
+
+                        case "3":
+
+                            target = Point3;
+
+                            Console.WriteLine();
+                            Console.WriteLine("--> 準備移動至 Point3");
+
+                            break;
+
+
+                        default:
+
+                            Console.WriteLine();
+                            Console.WriteLine(
+                                $"錯誤：不存在點位「{command}」"
+                            );
+
+                            continue;
+                    }
+
+
+                    // -------------------------------------------------
+                    // 執行 PTP 關節移動
+                    // -------------------------------------------------
+
+                    HRobot.ptp_axis(
+                        robotId,
+                        0,
+                        target
+                    );
+
+
+                    // -------------------------------------------------
+                    // 等待機器人移動完成
+                    // -------------------------------------------------
+
+                    WaitMotionDone(robotId);
+
+
+                    Console.WriteLine(
+                        $"Point{command} 到達！"
+                    );
+
+
+                    // 點位與點位之間稍微停頓
+                    Thread.Sleep(500);
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("本次指令執行完成。");
+            }
+
+
+            // =========================================================
+            // 關閉連線
+            // =========================================================
+
+            Console.WriteLine();
+            Console.WriteLine("中斷機器人連線...");
+
+            HRobot.disconnect(robotId);
+
+            Console.WriteLine("程式結束！");
+        }
+
+
+        // =============================================================
+        // 等待機器人動作完成
+        // =============================================================
+
+        private static void WaitMotionDone(int robotId)
+        {
+            // 先稍微等待，避免剛送出指令時
+            // motion state 還沒來得及改變
+            Thread.Sleep(200);
+
+            while (
+                HRobot.get_motion_state(robotId)
+                !=
+                (int)RobotMotionStatus.kIdle
+            )
+            {
+                Thread.Sleep(100);
+            }
+        }
+    }
+}
