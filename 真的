@@ -1,0 +1,253 @@
+//點位
+double[] poseReady = new double[6] { 0, 0, -10, 0, -80, 0 };
+double[] poseRight = new double[6] { 35, 20, -35, 45, -75, 45 };
+double[] poseLeft  = new double[6] { -35, 20, -35, -45, -75, -45 };
+//移動
+HRobot.ptp_axis(robotId, 0, poseRight);
+
+
+using System;
+
+using System.Threading;
+
+using SDKHrobot;
+
+
+
+namespace HiwinRobotApp
+
+{
+
+    class Program
+
+    {
+
+        private static HRobot.CallBackFun myCallback;
+
+
+
+        static void CallBackHandler(ushort cmd, ushort rlt, ref ushort msg, int len)
+
+        {
+
+            // 控制器事件回饋處理
+
+        }
+
+
+
+        static void Main(string[] args)
+
+        {
+
+            string robotIp = "192.168.0.2"; // 控制器 IP
+
+            int connectionLevel = 1;         // 1: 操作者等級 (HRSS 需為 EXT 模式)
+
+
+
+            myCallback = new HRobot.CallBackFun(CallBackHandler);
+
+
+
+            Console.WriteLine($"[1/4] 連線至機器人 ({robotIp})...");
+
+            int robotId = HRobot.open_connection(robotIp, connectionLevel, myCallback);
+
+
+
+            if (robotId < 0)
+
+            {
+
+                Console.WriteLine($"連線失敗，錯誤代碼: {robotId}");
+
+                return;
+
+            }
+
+            Console.WriteLine($"連線成功，裝置 ID: {robotId}");
+
+
+
+            // 1. 清除警報並激磁
+
+            Console.WriteLine("[2/4] 馬達激磁啟動...");
+
+            HRobot.clear_alarm(robotId);
+
+            Thread.Sleep(200);
+
+
+
+            HRobot.set_motor_state(robotId, 1);
+
+            int timeout = 0;
+
+            while (HRobot.get_motor_state(robotId) == 0)
+
+            {
+
+                Thread.Sleep(100);
+
+                if (++timeout > 30)
+
+                {
+
+                    Console.WriteLine("錯誤：馬達激磁逾時！");
+
+                    HRobot.disconnect(robotId);
+
+                    return;
+
+                }
+
+            }
+
+            Console.WriteLine("馬達已成功激磁！");
+
+
+
+            // 2. 設定運轉速度
+
+            // 大幅度運動建議先設 10% 觀察，確認完全無干涉後可自行調至 15%~20%
+
+            HRobot.set_override_ratio(robotId, 10);
+
+            Console.WriteLine("[3/4] 已設定速度倍率為 10%");
+
+
+
+            // 讀取當前角度作為安全起點參考
+
+            double[] startJoints = new double[6];
+
+            HRobot.get_current_joint(robotId, startJoints);
+
+
+
+            Console.WriteLine("\n[4/4] 即將開始大幅度空間運動序列 (3秒後啟動)...");
+
+            Console.WriteLine("※ 手請隨時放在急停按鈕旁！");
+
+            Thread.Sleep(3000);
+
+
+
+            // ==================== 定義大幅度多軸姿態點位 ====================
+
+            // 姿態 1：安全準備點（直立微傾，離牆與桌面皆有足夠安全距離）
+
+            double[] poseReady = new double[6] { 0, 0, -10, 0, -80, 0 };
+
+
+
+            // 姿態 2：右前方大範圍前探（底座 +35°、大臂前伸 20°、腕部與夾爪旋轉）
+
+            double[] poseRight = new double[6] { 35, 20, -35, 45, -75, 45 };
+
+
+
+            // 姿態 3：左前方大範圍前探（底座 -35°、大臂前伸 20°、腕部與夾爪反向旋轉）
+
+            double[] poseLeft  = new double[6] { -35, 20, -35, -45, -75, -45 };
+
+
+
+            // ==================== 依序執行動作 ====================
+
+
+
+            // 動作 1：平穩移動到準備位置
+
+            Console.WriteLine("\n--> 移動至【中央準備姿態】...");
+
+            HRobot.ptp_axis(robotId, 0, poseReady);
+
+            WaitMotionDone(robotId);
+
+            Thread.Sleep(800);
+
+
+
+            // 動作 2：向前右方大幅度舒展伸展
+
+            Console.WriteLine("--> 移動至【右前方大伸展姿態】 (J1: +35°)...");
+
+            HRobot.ptp_axis(robotId, 0, poseRight);
+
+            WaitMotionDone(robotId);
+
+            Thread.Sleep(1000);
+
+
+
+            // 動作 3：跨越中央大範圍平移至左前方
+
+            Console.WriteLine("--> 橫向大範圍擺動至【左前方大伸展姿態】 (J1: -35°)...");
+
+            HRobot.ptp_axis(robotId, 0, poseLeft);
+
+            WaitMotionDone(robotId);
+
+            Thread.Sleep(1000);
+
+
+
+            // 動作 4：收回中央準備位置
+
+            Console.WriteLine("--> 收回至【中央準備姿態】...");
+
+            HRobot.ptp_axis(robotId, 0, poseReady);
+
+            WaitMotionDone(robotId);
+
+            Thread.Sleep(800);
+
+
+
+            // 動作 5：回到最初開機位置
+
+            Console.WriteLine("--> 復歸回到【開機初始位置】...");
+
+            HRobot.ptp_axis(robotId, 0, startJoints);
+
+            WaitMotionDone(robotId);
+
+
+
+            // 3. 關閉連線
+
+            Console.WriteLine("\n全套大幅度動作執行完畢，中斷連線。");
+
+            HRobot.disconnect(robotId);
+
+            Console.WriteLine("測試成功結束！");
+
+        }
+
+
+
+        private static void WaitMotionDone(int robotId)
+
+        {
+
+            Thread.Sleep(200);
+
+            while (HRobot.get_motion_state(robotId) != (int)RobotMotionStatus.kIdle)
+
+            {
+
+                Thread.Sleep(100);
+
+            }
+
+        }
+
+    }
+
+}
+
+
+
+https://github.com/01narayuki05/509-AI.git
